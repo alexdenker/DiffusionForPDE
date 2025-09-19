@@ -1,8 +1,0 @@
-lr: 0.002
-mesh_name: disk_dense
-model:
-  modes: 14
-  width: 48
-num_epochs: 1200
-resume_from: null
-save_dir: exp/fno_dse
