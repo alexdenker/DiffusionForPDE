@@ -18,6 +18,6 @@ We assume that we measure $u$ at some points inside the domain $\Omega$ and want
 ## Files 
 
 - `create_mesh.py`:  This script creates the mesh and saves it in `data/` 
-- `diffusion.py`: This is the forward diffusion process (based on DDPM). For $t \in \{0,...,100\}$ we have $x_t = \sqrt{\alpha_t} x_0 + \sqrt{(1-\alpha_t)} z$.
+- `diffusion.py`: This is the forward diffusion process (based on DDPM). For $t \in \{0,...,1000\}$ we have $x_t = \sqrt{\alpha_t} x_0 + \sqrt{(1-\alpha_t)} z$.
 - `poisson_inverse.py`: Implementation of FunDPS for the Poisson inverse problem 
 - `train_fno_pixelwisenoise.py`: Training of the (time-dependent) neural operator using the diffusion process from `diffusion.py` using i.i.d. Gaussian noise for every mesh position.  
