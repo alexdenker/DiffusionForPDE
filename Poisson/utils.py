@@ -114,12 +114,12 @@ def gen_conductivity(
                 condOut[X <= 1] = res
         else:
             for i in range(numInc):
-                cond_opt = [
-                    np.random.rand() * 0.29 + 0.01,
-                    np.random.rand() * 1.0 + 2.0,
-                ]
-                cond_idx = np.random.randint(2)
-                cond[i] = cond_opt[cond_idx]
+                #cond_opt = [
+                #    np.random.rand() * 0.29 + 0.01,
+                #    np.random.rand() * 1.0 + 2.0,
+                #]
+                #cond_idx = np.random.randint(2)
+                cond[i] = np.random.rand() * 3.0 + 1.0 #cond_opt[cond_idx]
 
                 X = cart_ellipse(x1, x2, h[i], k[i], a[i], b[i], alpha[i])
                 condOut[X <= 1] = cond[i]
