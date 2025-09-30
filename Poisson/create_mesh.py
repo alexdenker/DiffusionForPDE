@@ -6,13 +6,14 @@ import os
 import math
 import sys
 
-if not os.path.exists("data/mesh"):
-    os.makedirs("data/mesh")
+
 
 mesh_name = "disk" # "square"  "disk" "L"
-mesh_type = "coarse" # "dense" "coarse"
+mesh_type = "dense" # "dense" "coarse"
 show_mesh = False
 
+if not os.path.exists(f"data/{mesh_name}"):
+    os.makedirs(f"data/{mesh_name}")
 
 if mesh_name == "disk":
    ### Parameters of mesh
@@ -52,7 +53,7 @@ if mesh_name == "disk":
    #gmsh.write('disk.msh')
    #gmsh.fltk.initialize()
 
-   gmsh.write(f"data/mesh/disk_{mesh_type}.msh")
+   gmsh.write(f"data/disk/disk_{mesh_type}.msh")
    #gmsh.write("disk.png")  # Save as PNG
    #gmsh.write("disk.pdf")  # Save as PDF
    # Launch the GUI to see the results:
