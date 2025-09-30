@@ -1,11 +1,26 @@
 """
-
-Author: derick@uni-bremen.de
+Adapted from the code used in 
+    Denker et al. "Deep Learning Based Reconstruction Methods for Electrical Impedance Tomography" (2025)
+    https://arxiv.org/abs/2508.06281
 
 """
 
+import torch 
 import numpy as np
 from numpy.typing import NDArray
+
+def create_sample(mesh_pos):
+    sigma_mesh = gen_conductivity(
+        mesh_pos[:, 0], mesh_pos[:, 1], max_numInc=3, backCond=0.0
+    )
+    return torch.from_numpy(sigma_mesh).float().unsqueeze(0)
+
+def draw_batch(batch_size, mesh_pos):
+    x = [] 
+    for _ in range(batch_size):
+        x.append(create_sample(mesh_pos))
+
+    return torch.cat(x, dim=0)
 
 
 def add_texture(x, y, kx, ky, angle, centre):

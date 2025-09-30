@@ -40,7 +40,7 @@ from dolfinx.fem.petsc import assemble_matrix, assemble_vector, create_vector
 from scipy.sparse import csr_matrix
 
 
-from neural_operator.fourier_neural_operator_dse import FNO_dse
+from neural_operator.nfft_neural_operator import NUFNO
 from utils import gen_conductivity
 from diffusion import Diffusion
 
@@ -80,7 +80,7 @@ mesh_pos = np.array(W.tabulate_dof_coordinates()[:,:2])
 
 ax = fem.Function(W)
 np.random.seed(123)
-ax.x.array[:] = gen_conductivity(mesh_pos[:, 0], mesh_pos[:, 1], max_numInc=3, backCond=1.0).ravel()
+ax.x.array[:] = gen_conductivity(mesh_pos[:, 0], mesh_pos[:, 1], max_numInc=3, backCond=0.0).ravel()
 
 
 u_ = fem.Function(V)
@@ -134,18 +134,16 @@ print("rhs_torch: ", rhs_torch.shape)
 sol = torch.linalg.solve(M_dense, rhs_torch).to("cuda")
  
 
-fig, (ax1, ax2) = plt.subplots(1,2, figsize=(14,7))
+#fig, (ax1, ax2) = plt.subplots(1,2, figsize=(14,7))
+#im = ax1.tripcolor(tri, sol.cpu().numpy().flatten(), cmap='jet', shading='gouraud', edgecolors='k')
+#ax1.axis('image')
+#ax1.set_aspect('equal', adjustable='box')
+#ax1.set_title("Reconstruction")
+#ax1.axis("off")
+#fig.colorbar(im, ax=ax1)
 
-
-im = ax1.tripcolor(tri, sol.cpu().numpy().flatten(), cmap='jet', shading='gouraud', edgecolors='k')
-ax1.axis('image')
-ax1.set_aspect('equal', adjustable='box')
-ax1.set_title("Reconstruction")
-ax1.axis("off")
-fig.colorbar(im, ax=ax1)
-
-fig.colorbar(im, ax=ax2)
-plt.savefig("solution.png")
+#fig.colorbar(im, ax=ax2)
+#plt.savefig("solution.png")
 
 mask = np.random.choice(dofs_u, int(0.9*dofs_u), replace=False)
 
@@ -155,16 +153,18 @@ print("sol: ", sol.shape)
 y = torch.matmul(B, sol)
 
 configs = {
-    "model": "fno_dse",
     "mesh_name": "disk_dense",
-    "lr": 1e-3, 
     "save_dir": "exp/fno_dse",
     "model": {
     "modes": 14, 
-    "width": 48 }
+    "width": 32 }
 }
 
-model = FNO_dse(modes=configs["model"]["modes"], width=configs["model"]["width"])
+model = NUFNO(n_layers=4, 
+              modes=configs["model"]["modes"], 
+              width=configs["model"]["width"],
+              in_channels=3,
+              timestep_embedding_dim=33)
 print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))
 model.load_state_dict(torch.load("exp/fno_dse/circle/lno_model.pt"))
 model.to("cuda")
@@ -179,31 +179,39 @@ batch_size = 1
 
 pos = torch.from_numpy(mesh_pos).float().to("cuda").unsqueeze(0)
 pos = torch.repeat_interleave(pos, repeats=batch_size, dim=0)
+pos[:,:,0] = (pos[:,:,0] - torch.min(pos[:,:,0]))/(torch.max(pos[:,:,0]) - torch.min(pos[:,:,0])) - 0.5
+pos[:,:,1] = (pos[:,:,1] - torch.min(pos[:,:,1]))/(torch.max(pos[:,:,1]) - torch.min(pos[:,:,1])) - 0.5
 
+diffusion = Diffusion(beta_start=1e-4, beta_end=6e-3)
 
-diffusion = Diffusion()
+ts = torch.arange(0, diffusion.num_diffusion_timesteps).to("cuda")[::5]
+x = torch.randn((batch_size, 1, pos.shape[1])).to("cuda")
 
-ts = torch.arange(0, diffusion.num_diffusion_timesteps).to("cuda")[::4]
-x = torch.randn((batch_size, pos.shape[1], 1)).to("cuda")
+def model_fn(x, t, pos):
+    inp = torch.cat([pos.permute(0, 2, 1), x], dim=1)
+
+    # output of models as (xt - sqrt(alpha_t) * model) / sqrt(1-alpha_t)
+    sqrt_ab = diffusion.alpha(t).sqrt().view(-1, 1, 1)
+    sqrt_omb = (1 - diffusion.alpha(t)).sqrt().view(-1, 1, 1)
+
+    pred = model(inp, t, pos.unsqueeze(1))
+    return (x - sqrt_ab * pred) / sqrt_omb
+
 
 print("x: ", x.shape)
 
 n = x.size(0)
 ss = [-1] + list(ts[:-1])
-xt_s = [x.cpu()]
-x0_s = []
 
 xt = x
 eta = 1.0
 
-gamma = 1.5
+gamma = 30.0
 for ti, si in tqdm(zip(reversed(ts), reversed(ss)), total=len(ts)):
     t = torch.ones(n).to(x.device).long() * ti
     s = torch.ones(n).to(x.device).long() * si
 
     xt = xt.clone().to('cuda').requires_grad_(True)
-
-
 
     alpha_t = diffusion.alpha(t).view(-1, 1, 1)
     alpha_s = diffusion.alpha(s).view(-1, 1, 1)
@@ -211,46 +219,36 @@ for ti, si in tqdm(zip(reversed(ts), reversed(ss)), total=len(ts)):
         (1 - alpha_t / alpha_s) * (1 - alpha_s) / (1 - alpha_t)
     ).sqrt() * eta
     c2 = ((1 - alpha_s) - c1**2).sqrt()
-
-    inp = torch.cat([pos, xt], dim=-1)
         
-    et = model(inp, t)
+    et = model_fn(xt, t, pos)
     x0_pred = (xt - et * (1 - alpha_t).sqrt()) / alpha_t.sqrt()
 
-    Hx = forward(x0_pred)
+    Hx = forward(x0_pred.squeeze(1).unsqueeze(-1))
 
     mat_norm = ((y - Hx).reshape(n, -1) ** 2).sum(dim=1).sqrt().detach()
     mat = ((y - Hx).reshape(n, -1) ** 2).sum()
     grad_term = torch.autograd.grad(mat, xt, retain_graph=True)[0]
     
+    print(mat_norm)
     grad_term = grad_term.detach()
     coeff = gamma / mat_norm.reshape(-1, 1, 1)
-    print(torch.linalg.norm(grad_term * coeff))
-    x0_pred = torch.clamp(x0_pred, 0, 5)
+    #print(torch.linalg.norm(grad_term * coeff))
     xs = alpha_s.sqrt() * x0_pred + c1 * torch.randn_like(xt) + c2 * et.detach() # DDIM 
     xs = xs - grad_term * coeff # Data Consitency "getting closer to matching the observatoin"
 
-    
-
-    # xt_s.append(xs.cpu())
-    # x0_s.append(x0_pred.cpu())
     xt = xs.detach()
-
-
-
-print(xt.shape)
 
 
 fig, (ax1, ax2) = plt.subplots(1,2, figsize=(14,7))
 
 
-im = ax1.tripcolor(tri, xt[0].cpu().numpy().flatten(), cmap='jet', shading='flat', vmin=0.01, vmax=4.0, edgecolors='k')
+im = ax1.tripcolor(tri, xt[0].cpu().numpy().flatten(), cmap='jet', shading='flat', edgecolors='k')
 ax1.axis('image')
 ax1.set_aspect('equal', adjustable='box')
 ax1.set_title("Reconstruction")
 ax1.axis("off")
 fig.colorbar(im, ax=ax1)
-im = ax2.tripcolor(tri, a_true_torch.cpu().numpy().flatten(), cmap='jet', shading='flat', vmin=0.01, vmax=4.0, edgecolors='k')
+im = ax2.tripcolor(tri, a_true_torch.cpu().numpy().flatten(), cmap='jet', shading='flat',  edgecolors='k')
 ax2.axis('image')
 ax2.set_aspect('equal', adjustable='box')
 ax2.set_title("Ground truth")
@@ -258,7 +256,7 @@ ax2.axis("off")
 
 fig.colorbar(im, ax=ax2)
 plt.savefig("reconstruction.png")
-
+plt.show()
 
 
 
