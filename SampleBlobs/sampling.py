@@ -17,11 +17,8 @@ from tqdm import tqdm
 
 import torch 
 import numpy as np 
-import wandb 
-from datetime import datetime
 
-from neural_operator.nfft_neural_operator import NUFNO
-from dataset import EllipsesDataset
+from nfft_neural_operator import NUFNO
 from sampler.noise_sampler import RBFKernel
 from sde import OU
 
@@ -42,7 +39,7 @@ if not os.path.exists(log_img_dir):
     os.makedirs(log_img_dir)
 
 ###
-load_path = ...
+load_path = "exp/NonUniformFNO/20251002_074424"
 ###
 
 with open(os.path.join(load_path,"config.yaml"), "r") as f:
