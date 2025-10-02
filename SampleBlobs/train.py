@@ -38,7 +38,6 @@ from configs import WANDB_PROJECT, WANBD_ENTITY
 
 configs = {
     "mesh_name": "disk_dense",
-    "resume_from": None, 
     "num_epochs": 1000,
     "lr": 1e-3, 
     "save_dir": "exp/NonUniformFNO",
@@ -52,6 +51,9 @@ configs = {
 }
 
 log_wandb = True 
+
+if not os.path.exists("wandb/"):
+    os.makedirs("wandb/")
 
 wandb_kwargs = {
     "project": WANDB_PROJECT,
