@@ -3,13 +3,14 @@
 Learn a model for functions on a circular mesh. The functions have a zero background and contain a number of ellipses with varying intensity.  
 
 We use the following forward SDE 
-$$ d X_t = -1/2 \beta(t) X_t + \sqrt{\beta(t) C} dW_t $$
+
+$$ d X_t = -1/2 \beta(t) X_t dt+ \sqrt{\beta(t) C} dW_t $$
 
 for $t \in [0,1]$ and $\beta(t) = \beta_{min} + t (\beta_{max} - \beta_{min})$. 
 
 This SDE has the following reverse SDE
 
-$$ d Y_s = 1/2 \beta(1-s) Y_s + \beta(1-s) C \nabla \log p_{1-s}(Y_s) + \sqrt{\beta(1-s)C} dW_t $$
+$$ d Y_s = 1/2 \beta(1-s) Y_s dt + \beta(1-s) C \nabla \log p_{1-s}(Y_s) dt + \sqrt{\beta(1-s)C} dW_t $$
 
 We can simulate this with euler maruyama 
 
