@@ -38,6 +38,7 @@ class RBFKernel(NoiseSampler):
         self.L = torch.linalg.cholesky(C)
 
         del C  # don't need it anymore
+        # C= L L^T
 
     @torch.no_grad()
     def sample(self, N):
@@ -54,6 +55,14 @@ class RBFKernel(NoiseSampler):
         y = torch.linalg.solve_triangular(self.L, x.T, upper=False)
         return y.T
     
+    def apply_C(self, x):
+        # x: (N, s)
+        return torch.matmul(self.L, torch.matmul(self.L.T, x.T)).T
+
+    def apply_Csqrt(self, x):
+        # x: (N, s)
+        return torch.matmul(self.L, x.T).T  
+        
 if __name__ == "__main__":
     # create random mesh points in a [0,1]^2 domain
     mesh_points = torch.rand(2000, 2)
@@ -64,7 +73,11 @@ if __name__ == "__main__":
     print(samples2.shape)  # should be (4, 2000)      
     assert samples2.shape == (4, 2000), "Shape mismatch for RBF kernel noise sampler"
 
-
     y = sampler2.apply_L_inv(samples2)
     print(y.shape)
-    
+
+    y = sampler2.apply_C(samples2)
+    print("apply C: ", y.shape)
+
+    y = sampler2.apply_Csqrt(samples2)
+    print("apply C sqrt: ", y.shape)

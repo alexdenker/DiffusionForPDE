@@ -26,7 +26,6 @@ First use the script `create_dataset.py` to create a dataset for training. Then 
 
 We create a dataset of random Gaussians (blobs \ ellipses) on a circular domain.
 
-
 ### Installation
 
 This implementation used the non-uniform FFT from *https://github.com/johertrich/simple_torch_NFFT*
@@ -35,3 +34,11 @@ It requires only PyTorch (>= 2.5 recommended) and NumPy and can be installed wit
 ```
 pip install git+https://github.com/johertrich/simple_torch_NFFT
 ```
+
+
+### TODO: 
+
+- Neural Operator: Add U-Net logic, currently the network works only on the same resolution. However, downsampling data on a non-uniform / unstructured mesh is a bit harder. 
+- Noise type: The noise supported is given by radial basis functions $C_{i,j} = \exp(- || x_i - x_j ||_2^2 / (2s^2))$ for different $s$. Different choices? 
+- Discretisation: Currently the function are discretised on the mesh. We could also work in a different discretisation? 
+- PDE: Currently only the PoissonPDE is implemented, different choices?
