@@ -35,7 +35,7 @@ def sample_ellipse(test_step: int = 200, tolerance: int = 50):
     y = k + a * np.sin(alpha) * np.cos(theta) + b * np.cos(alpha) * np.sin(theta)
 
     i = 0
-    while np.any(x**2 + y**2 > 0.9):
+    while np.any(x**2 + y**2 > 0.8):
         b = np.random.rand() * (a - 0.1) + 0.2
         x = h + a * np.cos(alpha) * np.cos(theta) - b * np.sin(alpha) * np.sin(theta)
         y = k + a * np.sin(alpha) * np.cos(theta) + b * np.cos(alpha) * np.sin(theta)
