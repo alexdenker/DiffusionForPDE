@@ -19,7 +19,7 @@ import torch
 import numpy as np 
 from omegaconf import OmegaConf
 
-from neural_operator.nfft_neural_operator_version2 import NUFNO
+from neural_operator.nfft_neural_operator import NUFNO
 from neural_operator.score_model import ScoreModel
 from samplers.euler_maruyama import EulerMaruyama
 from neural_operator.noise_sampler import RBFKernel
@@ -97,6 +97,9 @@ num_timesteps = 400
 ts = torch.linspace(1e-3, 1, num_timesteps).to("cuda")
 
 sampler = EulerMaruyama(score_model, cfg)
+
+
+print(pos_inp.shape, ts.shape)
 
 x = sampler.sample(pos_inp, ts)
 

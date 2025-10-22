@@ -8,33 +8,39 @@ import torch
 from physics.conjugate_gradient import cg 
 from physics.poisson import PoissonOperator
 from physics.dataset import EllipsesDataset
+from physics.utils import gen_conductivity
 
 device = "cuda"
-mesh_name = "disk"
+mesh_name = "disk_dense" #"disk_256" #"disk_dense"
 
-poisson = PoissonOperator(mesh_path=f"data/disk/{mesh_name}_dense.msh",
+poisson = PoissonOperator(mesh_path=f"data/disk/{mesh_name}.msh",
                           device=device)
-
 
 xy = poisson.omega.geometry.x
 cells = poisson.omega.geometry.dofmap.reshape((-1, poisson.omega.topology.dim + 1))
 tri = Triangulation(xy[:, 0], xy[:, 1], cells)
 mesh_pos = np.array(poisson.W.tabulate_dof_coordinates()[:,:2])
 
-
-
-mask = np.random.choice(poisson.dofs_pl, int(0.7*poisson.dofs_pl), replace=False)
+mask = np.random.choice(poisson.dofs_pl, int(0.2*poisson.dofs_pl), replace=False)
 
 B = torch.eye(poisson.dofs_pl,device=device)[mask]
 poisson.set_observation_operator(B)
 
-dataset = EllipsesDataset(base_path="dataset/mesh_dg0")
-a = dataset[0].to(device).T
+a = sigma_mesh = gen_conductivity(
+        mesh_pos[:, 0], mesh_pos[:, 1], max_numInc=3, backCond=0.0
+    )
+a = torch.from_numpy(a).float().to(device).unsqueeze(-1)
+
+#dataset = EllipsesDataset(base_path="dataset/mesh_dg0")
+#a = dataset[0].to(device).T
+
+
 
 print("a: ", a.shape)
 
 sol = poisson.solve_linear_system(a)
 y = torch.matmul(B, sol)
+y = y + 0.01 * torch.randn_like(y)
 
 
 gamma = 1e-5 #1e-5# 1e-4
