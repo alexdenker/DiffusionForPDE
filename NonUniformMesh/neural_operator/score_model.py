@@ -26,9 +26,9 @@ class ScoreModel():
             var_factor = self.sde.cov_t_scaling(t, xt)
             pred = self.model(inp, t, pos.unsqueeze(1)) / var_factor
         
-        if self.cfg.model.model_type == "raw":  # the network output is nabla log p
+        if self.cfg.model.model_type == "RAW":  # the network output is nabla log p
             score = self.noise_sampler.apply_C(pred.squeeze()).unsqueeze(1)
-        elif self.cfg.model.model_type == "C_sqrt": # the network output is C^{1/2} nabla log p 
+        elif self.cfg.model.model_type == "C_SQRT": # the network output is C^{1/2} nabla log p 
             score = self.noise_sampler.apply_Csqrt(pred.squeeze()).unsqueeze(1)
         elif self.cfg.model.model_type == "C": # the network output is C nabla log p
             score = pred
