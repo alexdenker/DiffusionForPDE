@@ -42,6 +42,7 @@ class TrainingConfig:
     save_dir: str = "exp/NonUniformFNO"
     log_wandb: bool = True
     batch_size: int = 16
+    train_on: str = "gaussian_bumps"  # dataset to train on
     
 @dataclass
 class Config:

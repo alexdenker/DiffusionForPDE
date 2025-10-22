@@ -19,6 +19,7 @@ import torch
 import numpy as np 
 import wandb 
 from datetime import datetime
+import argparse 
 
 from omegaconf import OmegaConf
 from configs.model_configs import Config
@@ -27,9 +28,9 @@ from hydra import main
 
 from configs.wandb_configs import WANDB_PROJECT, WANBD_ENTITY
 
-from neural_operator.nfft_neural_operator_version2 import NUFNO
+from neural_operator.nfft_neural_operator import NUFNO
 from neural_operator.score_model import ScoreModel
-from physics.dataset import EllipsesDataset
+from physics.dataset import EllipsesDataset, Normalize
 from neural_operator.noise_sampler import RBFKernel
 from neural_operator.sde import OU
 
@@ -49,14 +50,19 @@ cs.store(name="base_config", node=Config)
 @main(config_name="base_config", config_path=None, version_base=None)
 def main_app(cfg: Config):
     print(cfg)
+
+
+    train_on = cfg.training.train_on
+
+
     if not os.path.exists("wandb/"):
         os.makedirs("wandb/")
-
+    model_type = cfg.model.model_type.value
     wandb_kwargs = {
         "project": WANDB_PROJECT,
         "entity": WANBD_ENTITY,
         "config": OmegaConf.to_container(cfg, resolve=True),
-        "name": "NUFNO_Diffusion_rbfnoise",
+        "name": f"Diffusion_NonUniformMesh_modeltype={model_type}_train_on={train_on}",
         "mode": "online" if cfg.training.log_wandb else "disabled" , 
         "settings": wandb.Settings(code_dir="wandb/"),
         "dir": "wandb/",
@@ -83,8 +89,8 @@ def main_app(cfg: Config):
 
         tri = Triangulation(xy[:, 0], xy[:, 1], cells)
 
-        name = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_dir = os.path.join(cfg.training.save_dir, name)
+        name = run.id
+        log_dir = os.path.join(cfg.training.save_dir, f"train_on={train_on}" , f"model_type={model_type}", name)
         print("save model to ", log_dir)
 
         if not os.path.exists(log_dir):
@@ -114,7 +120,14 @@ def main_app(cfg: Config):
         optimizer = torch.optim.Adam(score_model.model.parameters(), lr=cfg.training.lr )
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.training.num_epochs, eta_min=1e-5)
 
-        dataset = EllipsesDataset(base_path="dataset/mesh_dg0")
+        if train_on == "darcy_flow":
+            mean = 7.5 
+            std = 9.0   
+            transform = Normalize(mean, std)
+
+            dataset = EllipsesDataset(base_path="dataset/darcy_flow", transform=transform)
+        else:
+            dataset = EllipsesDataset(base_path=f"dataset/{train_on}")
         
         plot_batch = [dataset[i] for i in range(6)]
         plot_batch = torch.cat(plot_batch, dim=0).to(device).unsqueeze(1)
@@ -122,8 +135,6 @@ def main_app(cfg: Config):
         data_loader = torch.utils.data.DataLoader(dataset, cfg.training.batch_size, num_workers=6)
         
         pos = torch.from_numpy(mesh_pos).float().to("cuda").unsqueeze(0)
-        pos[:,:,0] = (pos[:,:,0] - torch.min(pos[:,:,0]))/(torch.max(pos[:,:,0]) - torch.min(pos[:,:,0])) - 0.5
-        pos[:,:,1] = (pos[:,:,1] - torch.min(pos[:,:,1]))/(torch.max(pos[:,:,1]) - torch.min(pos[:,:,1])) - 0.5
 
         print(f"Start training with score model type as {cfg.model.model_type}")
 
