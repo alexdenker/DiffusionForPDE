@@ -95,14 +95,17 @@ def main(args):
 
     print(pos_inp.shape, ts.shape)
 
-    x = sampler.sample(pos_inp, ts)
-
+    x = sampler.sample(pos_inp, ts) 
+    if cfg.training.train_on == "darcy_flow":
+        mean = 7.5 
+        std = 9.0   
+        x = x * std + mean
 
     fig, axes = plt.subplots(2,3, figsize=(14,7))
 
     for idx, ax in enumerate(axes.ravel()):
         if idx < x.shape[0]:
-            im = ax.tripcolor(tri, x[idx].cpu().numpy().flatten(),  shading='flat', edgecolors='k') # cmap='Blues',
+            im = ax.tripcolor(tri, x[idx].cpu().numpy().flatten(), cmap="jet",  shading='flat', edgecolors='k') # cmap='Blues',
             ax.axis('image')
             ax.set_aspect('equal', adjustable='box')
             ax.set_title("Sample")
