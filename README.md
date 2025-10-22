@@ -5,9 +5,9 @@ For finite-dimensional diffusion processes we are able to estimate the (generali
 We want to apply this framework to several PDE-based problems. 
 
 Structure:
-- `Poisson/`: This folder contains the code for the Poisson inverse problem 
+- `NonUniformMesh/`: This folder contains the code for training infinite-dimensional diffusion models on a non-uniform mesh and a first implementation of conditional sampling for Poisson. 
 
-
+All other folders just have some code blocks.
 
 ## Installation 
 
