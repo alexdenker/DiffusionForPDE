@@ -27,20 +27,17 @@ class DPS():
         for ti in tqdm(reversed(ts), total=len(ts)):
             #print(ti)
             t = torch.ones(batch_size).to(xt.device)* ti
-            cov_t = self.sde.cov_t_scaling(t, xt)
-            mean_t_scaling = self.sde.mean_t_scaling(t, xt)
 
             xt.requires_grad_()
-            score = self.model(xt, t, pos)
-
-            x0_pred = (xt + score *cov_t**2) / mean_t_scaling
+            score, x0_pred = self.model(xt, t, pos)
 
             beta_t = self.sde.beta_t(t).view(-1, 1, 1)
             noise = self.noise_sampler.sample(batch_size).unsqueeze(1) # N(0,C)
             
-            Hx = self.forward_operator(x0_pred.squeeze(1).unsqueeze(-1))
-
+            Hx = self.forward_operator.forward(x0_pred.squeeze(1).unsqueeze(-1)).squeeze(-1)
+            #print("Hx: ", Hx.shape, " y: ", y.shape)
             mat = ((Hx - y).reshape(batch_size, -1) ** 2).sum()
+
             mat_norm = ((y - Hx).reshape(batch_size, -1) ** 2).sum(dim=1).sqrt().detach()
             grad_term = torch.autograd.grad(mat, xt, retain_graph=True)[0]
             coeff = self.cfg.gamma / mat_norm.reshape(-1, 1, 1)

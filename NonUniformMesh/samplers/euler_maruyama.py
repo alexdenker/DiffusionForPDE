@@ -6,8 +6,8 @@ from tqdm import tqdm
 class EulerMaruyama():
     def __init__(self, model, cfg: DictConfig):
         self.model = model 
-        self.sde = model.sde # TODO: Write a model wrapper which has sde as an attribute
-        self.noise_sampler = model.noise_sampler # TODO: Write a model wrapper which has noise_sampler as an attribute
+        self.sde = model.sde
+        self.noise_sampler = model.noise_sampler 
         
         self.cfg = cfg 
 
