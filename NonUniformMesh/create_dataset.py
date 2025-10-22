@@ -17,8 +17,11 @@ except ImportError as e:
     use_dolfin = False 
 
 from physics.utils import gen_conductivity
+from neural_operator.noise_sampler import RBFKernel
 
 show_images = False 
+
+dataset_type = "darcy_flow" #"darcy_flow" # "gaussian_bumps"
 
 def create_sample(mesh_pos):
     sigma_mesh = gen_conductivity(
@@ -28,7 +31,7 @@ def create_sample(mesh_pos):
 
 num_examples = 4000
 
-dataset_dir = os.path.join("dataset", "mesh_dg0")
+dataset_dir = os.path.join("dataset", f"{dataset_type}")
 
 if not os.path.exists(dataset_dir):
     os.makedirs(dataset_dir)
@@ -48,13 +51,27 @@ else:
     mesh_pos = np.load("data/disk/disk_dense_mesh_pos.npy") 
 print(mesh_pos.shape)
 
+
+
+noise_sampler = RBFKernel(mesh_points=torch.from_numpy(mesh_pos).float(), scale=0.6, eps=1e-4, device="cpu")
+
+
 if show_images:
 
     tri = Triangulation(xy[:, 0], xy[:, 1], cells)
 
 
 for i in tqdm(range(num_examples)):
-    sigma = create_sample(mesh_pos)
+    if dataset_type == "gaussian_bumps":
+        sigma = create_sample(mesh_pos)
+    elif dataset_type == "darcy_flow":
+        a = noise_sampler.sample(N=1).T
+        a[a > 0] = 12 
+        a[a <= 0] = 3
+
+        sigma = a.squeeze().unsqueeze(0)
+    else:
+        raise NotImplementedError("Dataset type not implemented")
 
     if show_images:
 
