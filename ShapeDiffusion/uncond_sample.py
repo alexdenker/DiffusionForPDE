@@ -54,11 +54,27 @@ def model_fun(xt, t):
 
 # sample 
 batch_size_smpl = 8
-num_timesteps = 1000
-ts = torch.linspace(1e-3, 1, num_timesteps).to(device)
+num_timesteps = 100
+
+t_start = 1.0
+dataset = MNISTShapesDataset(class_label=4, num_landmarks=num_landmarks)
+data_loader = torch.utils.data.DataLoader(dataset, batch_size_smpl, num_workers=6)
+x_init = next(iter(data_loader)).to(device)
+
+random_t = torch.rand((x_init.shape[0],), device=x_init.device) *  t_start
+z = noise_sampler.sample(x_init.shape[0]).to(device)
+
+mean_t = sde.mean_t(random_t, x_init)
+mean_t_scale = sde.mean_t_scaling(random_t, x_init)
+
+cov_t = sde.cov_t_scaling(random_t, x_init)
+
+x_init = mean_t + cov_t * z 
+
+ts = torch.linspace(1e-3, t_start, num_timesteps).to(device)
 
 delta_t = ts[1] - ts[0]
-x_init = noise_sampler.sample(batch_size_smpl).to(device) # N(0,C)
+#x_init = noise_sampler.sample(batch_size_smpl).to(device) # N(0,C)
 
 xt = x_init.clone()
 
