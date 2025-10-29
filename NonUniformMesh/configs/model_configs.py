@@ -37,7 +37,7 @@ class NoiseConfig:
 @dataclass
 class TrainingConfig:
     num_epochs: int = 1000
-    lr: float = 1e-4
+    lr: float = 1e-3
     loss_scaling: str = "positive"  # scaling the loss by sigma(t)
     save_dir: str = "exp/NonUniformFNO"
     log_wandb: bool = True
