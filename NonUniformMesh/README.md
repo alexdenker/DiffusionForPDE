@@ -22,6 +22,12 @@ with $z \sim N(0,C)$.
 
 First use the script `create_dataset.py` to create a dataset for training. Then change the `WANDB_PROJECT` and `WANDB_ENTITY` in `configs/wandb_configs.py`. Train the model using `train.py`. Finally, sample using `uncond_sampling.py` (add the path of the saved model to the script).
 
+You can train the model for example using:
+
+```
+python train.py training.train_on=gaussian_bumps model.model_type=C noise.scale=1.0 sde.beta_max=15.0 model.width=64 model.timestep_embedding_dim=64 training.log_wandb=True
+```
+
 ### Dataset 
 
 We create a dataset of random Gaussians (blobs \ ellipses) on a circular domain.
