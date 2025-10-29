@@ -18,9 +18,11 @@ import torch
 import numpy as np 
 from omegaconf import OmegaConf
 
+from configs.model_configs import Config
+
 from neural_operator.nfft_neural_operator import NUFNO
 from neural_operator.score_model import ScoreModel
-from samplers.euler_maruyama import EulerMaruyama
+from samplers.euler_maruyama import EulerMaruyama, EulerMaruyamaExponential
 from neural_operator.noise_sampler import RBFKernel
 from neural_operator.sde import OU
 
@@ -41,8 +43,9 @@ parser.add_argument("--device", type=str, default="cuda", help="Device to use (e
 def main(args):
     device = args.device
     load_path = args.load_path
-
-    cfg = OmegaConf.load(os.path.join(load_path, "config.yaml"))
+    
+    cfg = OmegaConf.structured(Config) 
+    cfg = OmegaConf.merge(cfg, OmegaConf.load(os.path.join(load_path, "config.yaml")))
     print(cfg)
 
     mesh_name = cfg.model.mesh_name
@@ -78,8 +81,7 @@ def main(args):
     sde = OU(beta_min=cfg.sde.beta_min, beta_max=cfg.sde.beta_max)
 
     score_model = ScoreModel(model, sde, noise_sampler, cfg)
-
-    score_model.model.load_state_dict(torch.load(os.path.join(load_path, "fno_model.pt")))
+    score_model.model.load_state_dict(torch.load(os.path.join(load_path, "fno_model_ema.pt")))
     score_model.model.to("cuda")
     score_model.model.eval()
 
@@ -87,11 +89,11 @@ def main(args):
     batch_size = 6
     pos_inp = torch.repeat_interleave(pos, repeats=batch_size, dim=0)
 
-    num_timesteps = 400
-    ts = torch.linspace(1e-3, 1, num_timesteps).to("cuda")
+    num_timesteps = 100
+    ts = torch.linspace(1e-3, 1.0, num_timesteps).to("cuda")
 
     sampler = EulerMaruyama(score_model, cfg)
-
+    #sampler = EulerMaruyamaExponential(score_model, cfg)
 
     print(pos_inp.shape, ts.shape)
 
