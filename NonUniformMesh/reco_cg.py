@@ -21,18 +21,18 @@ cells = poisson.omega.geometry.dofmap.reshape((-1, poisson.omega.topology.dim + 
 tri = Triangulation(xy[:, 0], xy[:, 1], cells)
 mesh_pos = np.array(poisson.W.tabulate_dof_coordinates()[:,:2])
 
-mask = np.random.choice(poisson.dofs_pl, int(0.2*poisson.dofs_pl), replace=False)
+mask = np.random.choice(poisson.dofs_pl, int(0.8*poisson.dofs_pl), replace=False)
 
 B = torch.eye(poisson.dofs_pl,device=device)[mask]
 poisson.set_observation_operator(B)
 
-a = sigma_mesh = gen_conductivity(
+a  = gen_conductivity(
         mesh_pos[:, 0], mesh_pos[:, 1], max_numInc=3, backCond=0.0
     )
 a = torch.from_numpy(a).float().to(device).unsqueeze(-1)
 
-#dataset = EllipsesDataset(base_path="dataset/mesh_dg0")
-#a = dataset[0].to(device).T
+dataset = EllipsesDataset(base_path="dataset/mesh_dg0")
+a = dataset[0].to(device).T
 
 
 
@@ -40,7 +40,7 @@ print("a: ", a.shape)
 
 sol = poisson.solve_linear_system(a)
 y = torch.matmul(B, sol)
-y = y + 0.01 * torch.randn_like(y)
+y = y + 0.00 * torch.randn_like(y)
 
 
 gamma = 1e-5 #1e-5# 1e-4
@@ -55,6 +55,11 @@ a_pred = cg(op, x0, rhs=poisson.adjoint(y), n_iter=10)
 
 u_pred = poisson.solve_linear_system(a_pred)
 
+print("a_pred: ", a_pred.shape)
+
+print("a: ", a.shape)
+
+print("MSE: ", torch.mean((a_pred - a)**2))
 
 xy_2d = xy[:, 0:2]
 mask_xy = xy[mask,:]
