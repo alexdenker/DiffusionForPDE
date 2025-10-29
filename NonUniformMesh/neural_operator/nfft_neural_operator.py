@@ -2,9 +2,6 @@ import torch
 import torch.nn as nn
 import math 
 
-from simple_torch_NFFT import NFFT
-
-
 ### Time embedding 
 def timestep_embedding(timesteps, dim, max_period=10000):
     """
@@ -33,9 +30,10 @@ class VFT:
     def __init__(self, x_positions, y_positions, modes):
         # it is important that positions are scaled between 0 and 2*pi
         x_positions -= torch.min(x_positions)
-        self.x_positions = x_positions * 6.28 / (torch.max(x_positions))
+        self.x_positions = x_positions * 6.2831 / (torch.max(x_positions))
         y_positions -= torch.min(y_positions)
-        self.y_positions = y_positions * 6.28 / (torch.max(y_positions))
+        self.y_positions = y_positions * 6.2831 / (torch.max(y_positions))
+
         self.number_points = x_positions.shape[1]
         self.batch_size = x_positions.shape[0]
         self.modes = modes
@@ -229,7 +227,7 @@ class NUFNO(nn.Module):
         self.fc1 = nn.Linear(width, 128)
         self.fc2 = nn.Linear(128, 1)
 
-        self.act = nn.GELU()
+        self.act = nn.SiLU()
 
         self.layers = nn.ModuleList()
         for i in range(n_layers):
@@ -242,7 +240,6 @@ class NUFNO(nn.Module):
         pos: [batch_size, 1, num_points, 2] grid points
         """
         nuft = VFT(pos[:,0,:,0], pos[:,0,:,1], modes=self.modes)
-
 
         emb = timestep_embedding(t, self.timestep_embedding_dim, max_period=self.max_period)
         x = x.permute(0, 2, 1)

@@ -21,11 +21,10 @@ class ScoreModel():
         # Returns both the score function and the predicted x0.
         
         inp = torch.cat([pos.permute(0, 2, 1), xt], dim=1)
+        std_t = self.sde.std_t_scaling(t, xt)
 
         if self.cfg.model.precond_last_layer:
-            var_factor = self.sde.cov_t_scaling(t, xt)
-            pred = self.model(inp, t, pos.unsqueeze(1)) / var_factor
-        
+            pred = self.model(inp, t, pos.unsqueeze(1)) / std_t
         
         if self.cfg.model.model_type == "raw":  # the network output is nabla log p
             score = self.noise_sampler.apply_C(pred.squeeze()).unsqueeze(1)
@@ -37,7 +36,6 @@ class ScoreModel():
             raise NotImplementedError
 
         mean_t_scaling = self.sde.mean_t_scaling(t, xt)
-        cov_t = self.sde.cov_t_scaling(t, xt)
-        x0_pred = (xt + score * cov_t**2) / mean_t_scaling
+        x0_pred = (xt + score * std_t**2) / mean_t_scaling
 
         return score, x0_pred
