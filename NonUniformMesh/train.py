@@ -25,6 +25,7 @@ from omegaconf import OmegaConf
 from configs.model_configs import Config
 from hydra.core.config_store import ConfigStore
 from hydra import main
+from ema_pytorch import EMA
 
 from configs.wandb_configs import WANDB_PROJECT, WANBD_ENTITY
 
@@ -116,6 +117,11 @@ def main_app(cfg: Config):
         score_model = ScoreModel(model, sde, noise_sampler, cfg)
         score_model.model.to("cuda")
 
+        ema = EMA(
+            score_model.model,
+            beta = 0.999,          
+            update_after_step = 500,    
+            update_every = 10)
 
         optimizer = torch.optim.Adam(score_model.model.parameters(), lr=cfg.training.lr )
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.training.num_epochs, eta_min=1e-5)
@@ -156,15 +162,15 @@ def main_app(cfg: Config):
                 z = noise_sampler.sample(x0.shape[0]).unsqueeze(1) # N(0,C)
 
                 mean_t = sde.mean_t(random_t, x0)
-                cov_t = sde.cov_t_scaling(random_t, x0)
-                xt = mean_t + cov_t * z 
+                std_t = sde.std_t_scaling(random_t, x0)
+                xt = mean_t + std_t * z 
                
                 # pos_in: mesh positions (for the nFFT in the model)
                 pred, _ = score_model(xt, random_t, pos_inp) 
-                residual = pred + z/cov_t
+                residual = pred + z/std_t
 
                 if cfg.training.loss_scaling == "positive":
-                    residual = residual * cov_t
+                    residual = residual * std_t
 
                 residual_Linv = noise_sampler.apply_L_inv(residual.squeeze())
                 loss = torch.sum(residual_Linv**2)/pred.shape[0] # loss function (mulitplied by (1-exp(-t)).sqrt()
@@ -172,6 +178,7 @@ def main_app(cfg: Config):
                 mean_loss.append(loss.item())
 
                 optimizer.step() 
+                ema.update()
                 wandb.log({"train/loss": loss.item()})
 
             wandb.log({"train/mean_loss": float(np.mean(mean_loss))})
@@ -182,10 +189,10 @@ def main_app(cfg: Config):
                 times = torch.rand((plot_batch.shape[0],), device=plot_batch.device) * (1-0.001) + 0.001
 
                 mean_t = sde.mean_t(times, plot_batch)
-                cov_t = sde.cov_t_scaling(times, plot_batch)
+                std_t = sde.std_t_scaling(times, plot_batch)
 
                 z = noise_sampler.sample(plot_batch.shape[0]).unsqueeze(1)
-                noisy_batch = mean_t + cov_t * z
+                noisy_batch = mean_t + std_t * z
                 pos_inp = torch.repeat_interleave(pos, repeats=noisy_batch.shape[0], dim=0)
                 with torch.no_grad():
                     score_t, x0_pred = score_model(noisy_batch, times, pos_inp) 
@@ -220,7 +227,7 @@ def main_app(cfg: Config):
 
             wandb.log(wandb_log_dict)
             torch.save(score_model.model.state_dict(), os.path.join(log_dir,"fno_model.pt"))
-            
+            torch.save(ema.ema_model.state_dict(), os.path.join(log_dir,"fno_model_ema.pt"))
 
 if __name__ == "__main__":
     main_app()
