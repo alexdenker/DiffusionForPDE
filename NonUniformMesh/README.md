@@ -41,4 +41,5 @@ pip install git+https://github.com/johertrich/simple_torch_NFFT
 - Neural Operator: Add U-Net logic, currently the network works only on the same resolution. However, downsampling data on a non-uniform / unstructured mesh is a bit harder. 
 - Noise type: The noise supported is given by radial basis functions $C_{i,j} = \exp(- || x_i - x_j ||_2^2 / (2s^2))$ for different $s$. Different choices? 
 - Discretisation: Currently the function are discretised on the mesh. We could also work in a different discretisation? 
+- Different training distributions. Also, train on piecewise-linear (function defined on mesh points) or piecewise-constant functions (function defined on mesh faces)
 - PDE: Currently only the PoissonPDE is implemented, different choices?

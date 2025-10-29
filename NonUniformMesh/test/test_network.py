@@ -7,8 +7,7 @@ import numpy as np
 import sys, os 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from neural_operator.nfft_neural_operator_version2 import NUFNO, timestep_embedding
+from neural_operator.nfft_neural_operator import NUFNO, timestep_embedding
 
 use_dolfin = True 
 try: 

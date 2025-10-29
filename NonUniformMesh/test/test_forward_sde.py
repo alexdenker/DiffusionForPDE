@@ -75,11 +75,12 @@ for idx, t in enumerate(ts):
     t = t.to(device)
 
     mean_t = sde.mean_t(t, sigma)
-    cov_t = sde.cov_t_scaling(t, sigma)
+    std_t = sde.std_t_scaling(t, sigma)
 
-    xt = mean_t + cov_t * noise 
+    print("std_t: ", std_t)
+    xt = mean_t + std_t * noise 
 
-    im = axes[idx].tripcolor(tri, xt.cpu().numpy().flatten(), cmap='jet', shading='flat',edgecolors='k')
+    im = axes[idx].tripcolor(tri, xt.cpu().numpy().flatten(), cmap='jet', shading='flat') #,edgecolors='k')
     axes[idx].axis('image')
     axes[idx].set_aspect('equal', adjustable='box')
     axes[idx].set_title(f"t = {t.item():.4f}")
@@ -110,7 +111,7 @@ for idx, t in enumerate(ts):
     xt = xt + drift * delta_t + diffuson * delta_t.sqrt() * noise 
 
     if idx in [0, 10, 30, 40, 60, 90]:
-        im = axes[plot_idx].tripcolor(tri, xt.cpu().numpy().flatten(), cmap='jet', shading='flat',edgecolors='k')
+        im = axes[plot_idx].tripcolor(tri, xt.cpu().numpy().flatten(), cmap='jet', shading='flat') #,edgecolors='k')
         axes[plot_idx].axis('image')
         axes[plot_idx].set_aspect('equal', adjustable='box')
         axes[plot_idx].set_title(f"t = {float(np.round(t.item(),4))}")
