@@ -24,8 +24,8 @@ class DPS():
         delta_t = ts[1] - ts[0]
         xt = self.noise_sampler.sample(batch_size).unsqueeze(1) # N(0,C)
 
+        lkhd_strengths = []
         for ti in tqdm(reversed(ts), total=len(ts)):
-            #print(ti)
             t = torch.ones(batch_size).to(xt.device)* ti
 
             xt.requires_grad_()
@@ -35,15 +35,19 @@ class DPS():
             noise = self.noise_sampler.sample(batch_size).unsqueeze(1) # N(0,C)
             
             Hx = self.forward_operator.forward(x0_pred.squeeze(1).unsqueeze(-1)).squeeze(-1)
-            #print("Hx: ", Hx.shape, " y: ", y.shape)
+
             mat = ((Hx - y).reshape(batch_size, -1) ** 2).sum()
 
             mat_norm = ((y - Hx).reshape(batch_size, -1) ** 2).sum(dim=1).sqrt().detach()
             grad_term = torch.autograd.grad(mat, xt, retain_graph=True)[0]
             coeff = self.cfg.gamma / mat_norm.reshape(-1, 1, 1)
+
             xt = xt + beta_t/2.0 * delta_t*xt + beta_t* delta_t * score + beta_t.sqrt()*delta_t.sqrt() * noise 
             xt = xt - grad_term * coeff
             xt = xt.detach()
 
+            xt = torch.clamp(xt, -5, 5)
+            lkhd_strengths.append(coeff.item())
 
-        return xt 
+
+        return xt, lkhd_strengths
