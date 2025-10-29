@@ -44,7 +44,7 @@ class OU:
 
         return torch.exp(-1/2*self.alpha_t(t))
 
-    def cov_t_scaling(self, t, x):
+    def std_t_scaling(self, t, x):
         if len(t.shape) == 1:
             t = t.view(-1, *([1] * (x.ndim - 1)))
 
