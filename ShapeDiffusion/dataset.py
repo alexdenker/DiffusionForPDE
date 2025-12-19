@@ -36,13 +36,13 @@ def extract_landmarks_from_mnist(img, n_points=128, upsample_size=64, threshold=
 
 
 class MNISTShapesDataset(Dataset):
-    def __init__(self, class_label=4, num_landmarks=128):
+    def __init__(self, train=True, class_label=4, num_landmarks=128):
 
         self.class_label = class_label
         self.num_landmarks = num_landmarks
 
         transform = transforms.Compose([transforms.ToTensor(), transforms.Resize((64,64))])
-        dataset = datasets.MNIST(root='.', train=True, download=True, transform=transform)
+        dataset = datasets.MNIST(root='.', train=train, download=True, transform=transform)
         indices = [i for i, (_, label) in enumerate(dataset) if label == self.class_label]
         self.dataset = torch.utils.data.Subset(dataset, indices)
 
