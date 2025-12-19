@@ -61,14 +61,12 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
-    dataset = MNISTShapesDataset(class_label=4)
+    dataset = MNISTShapesDataset(class_label=3, num_landmarks=64)
 
-    fig, axes = plt.subplots(1,4, figsize=(10,5))
-    for i in range(4):
-        pts = dataset[i]
-
-    
-        axes[i].plot(pts[:,0], pts[:,1], '-o')
+    fig, axes = plt.subplots(2,4, figsize=(10,5))
+    for idx, ax in enumerate(axes.flatten()):
+        pts = dataset[idx]
+        ax.plot(pts[:,0], pts[:,1], '-o')
 
     fig.suptitle('Landmarks (MNIST contour)')
     plt.show()
