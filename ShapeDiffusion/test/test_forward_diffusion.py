@@ -2,6 +2,9 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+import sys, os 
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from dataset import MNISTShapesDataset
 from noise_sampler import ShapeNoise
@@ -10,13 +13,13 @@ from sde import OU
 device = 'cpu'
 
 
-dataset = MNISTShapesDataset() 
+dataset = MNISTShapesDataset(class_label=3, num_landmarks=64) 
 pts = dataset[0].unsqueeze(0)
 
 print(pts.shape)
 
-sde = OU(beta_min=0.001, beta_max=15.0)
-alpha = 1.5
+sde = OU(beta_min=0.001, beta_max=20.0)
+alpha = 2.0
 noise_sampler = ShapeNoise(num_landmarks=pts.shape[1], alpha=alpha, device='cpu')
 
 T = 1.0
@@ -31,9 +34,9 @@ for idx, t in enumerate(ts):
     t = t.to(device)
 
     mean_t = sde.mean_t(t, pts)
-    cov_t = sde.cov_t_scaling(t, pts)
+    std_t = sde.std_t_scaling(t, pts)
 
-    xt = mean_t + cov_t * noise 
+    xt = mean_t + std_t * noise 
 
     im = ax[idx].plot(np.append(xt[0,:,0].cpu().numpy(), xt[0,0,0].cpu().numpy()),
                         np.append(xt[0,:,1].cpu().numpy(), xt[0,0,1].cpu().numpy()), '-o', markersize=3)

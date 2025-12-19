@@ -6,7 +6,11 @@ and I want to see how the embeddings look like.
 import torch
 import matplotlib.pyplot as plt
 
-from simple_neural_operator import timestep_embedding
+import sys, os 
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from simple_network import timestep_embedding
 
 
 t = torch.linspace(0, 1, 100)
